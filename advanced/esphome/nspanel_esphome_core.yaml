@@ -13,6 +13,7 @@ substitutions:
   invalid_cooldown: "100ms"
   ota_password: ${wifi_password}
   ap_password: ${wifi_password}
+  api_password: ${wifi_password}
   device_name: NSPanel
   name: ${device_name}
   wifi_timeout: '15'
@@ -120,6 +121,7 @@ time:
 
 ##### START - API CONFIGURATION #####
 api:
+  password: ${ap_password}
   id: api_server
   reboot_timeout: 0s
   on_client_connected:
