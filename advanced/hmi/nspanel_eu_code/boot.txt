@@ -15,6 +15,7 @@ Page boot
             dim=100
             covx baud,baud_rate.txt,0,0
             baud_rate.txt+=" bps"
+            vis unavailable,0
         
         Postinitialize Event
             sendme
@@ -98,17 +99,17 @@ Text bluep_label
 Text tft_version
     Attributes
         ID                 : 8
-        Scope              : local
+        Scope              : global
         Dragging           : 0
         Send Component ID  : on press and release
         Associated Keyboard: none
-        Text               : 4.2.4
+        Text               : 4.2.6dev
         Max. Text Size     : 9
     
 Text esph_version
     Attributes
         ID                 : 9
-        Scope              : local
+        Scope              : global
         Dragging           : 0
         Send Component ID  : on press and release
         Associated Keyboard: none
@@ -118,7 +119,7 @@ Text esph_version
 Text bluep_version
     Attributes
         ID                 : 10
-        Scope              : local
+        Scope              : global
         Dragging           : 0
         Send Component ID  : on press and release
         Associated Keyboard: none
@@ -144,6 +145,16 @@ Text framework
         Associated Keyboard: none
         Text               : 
         Max. Text Size     : 10
+    
+Text unavailable
+    Attributes
+        ID                 : 16
+        Scope              : local
+        Dragging           : 0
+        Send Component ID  : disabled
+        Associated Keyboard: none
+        Text               : 
+        Max. Text Size     : 1
     
 Dual-state Button bt_reboot
     Attributes

@@ -3,6 +3,8 @@
 Table of contents:
 - [Description](#description)
 - [Instructions](#instructions)
+- [Memory Management](#memory-management)
+- [Removing Standard Settings](#removing-standard-settings)
 - [Examples](#examples)
   - [API encryption](#api-encryption)
   - [Custom OTA password](#custom-ota-password)
@@ -21,12 +23,15 @@ Table of contents:
   - [Scheduled actions](#scheduled-actions)
     - [Scheduled relay](#scheduled-relay)
     - [Scheduled climate](#scheduled-climate)
-  - [Framework `esp-idf`](#framework-esp-idf)
+  - [Frameworks](#frameworks)
+    - [Framework `arduino`](#framework-arduino)
+    - [Framework `esp-idf`](#framework-esp-idf)
   - [Bluetooth proxy](#bluetooth-proxy)
   - [Logger via UART](#logger-via-uart)
   - [Climate custom presets](#climate-custom-presets)
   - [Push button / Momentary switch](#push-button--momentary-switch)
   - [Expose relay fallback switch](#expose-relay-fallback-switch)
+  - [Relay Interlocking](#relay-interlocking)
 
 &nbsp;
 &nbsp;
@@ -55,7 +60,8 @@ You should add your customizations at the end of your ESPHome yaml, as in the ex
 ```yaml
 substitutions:
   # Settings - Editable values
-  device_name: "YOUR_NSPANEL_NAME" 
+  device_name: "YOUR_NSPANEL_NAME"
+  friendly_name: "Your panel's friendly name"
   wifi_ssid: !secret wifi_ssid
   wifi_password: !secret wifi_password
 
@@ -95,6 +101,61 @@ esp32:
   framework:
     type: esp-idf
 ```
+
+## Memory Management
+When adding new components or code to your ESP32, it's important to be mindful of memory usage.
+Your device has limited memory, and every addition uses some of this precious resource.
+
+### Understanding Memory Usage
+After compiling your firmware, you'll see a summary showing how much memory your firmware needs.
+Here's what it might look like:
+
+```log
+Successfully created esp32 image.
+Linking .pioenvs/office-workstation-panel/firmware.elf
+RAM:   [=         ]  10.5% (used 34484 bytes from 327680 bytes)
+Flash: [=======   ]  67.5% (used 1239253 bytes from 1835008 bytes)
+Building .pioenvs/office-workstation-panel/firmware.bin
+Creating esp32 image...
+Successfully created esp32 image.
+```
+
+- **Static Memory**: This is the memory required to load your firmware.
+Running your firmware requires additional memory.
+- **Dynamic Memory**: This is the memory allocated while your firmware is running.
+ESPHome checks if your static memory usage exceeds your device's limits to prevent installation issues, but it doesn't check dynamic memory usage.
+**Aim to keep static RAM usage below 20% and static Flash usage below 75%** to ensure there's enough room for dynamic operations.
+
+### Risks of Exceeding Memory Limits
+Exceeding memory limits can lead to issues:
+- **During Compilation**: ESPHome might prevent firmware installation if static memory is too high.
+- **During Runtime**: Exceeding dynamic memory can cause unexpected restarts.
+- **During Startup**: If your device runs out of memory at startup, it may not load the firmware, resulting in a black screen and an unresponsive device.
+The solution is to use a serial cable to reflash your device with a lighter firmware.
+
+### Tips for Managing Memory
+- Be cautious when adding memory-intensive components like `bluetooth_proxy`.
+- Compile your firmware with the option to download it before installation.
+This lets you check static memory usage without risking wireless installation issues.
+
+## Removing Standard Settings
+You can use customizations to remove certain default components or settings from this project.
+This is useful for altering standard settings or freeing up memory for additional components.
+Here's how you might remove some default settings:
+
+```yaml
+# Removes the `captive_portal` component
+captive_portal: !remove
+
+# Removes the OTA password
+ota:
+  password: !remove
+```
+
+> [!ATTENTION]
+> Be aware of the implications before removing components or settings.
+> Some of them are crucial for allowing your panel to interact correctly with the blueprint or for enabling ESPHome to install the firmware Over The Air.
+> Incorrect removals could render your panel unusable, potentially requiring a reflash via a serial cable.
 
 ## Examples
 
@@ -225,7 +286,7 @@ Creates a binary sensor to indicate either when the display is showing some page
 ```yaml
 # Is display awake?
 binary_sensor:
-  - name: ${device_name} Display state
+  - name: Display state
     id: display_state
     platform: template
     lambda: |-
@@ -237,7 +298,7 @@ You can easily invert the meaning to have a sensor for display sleeping:
 ```yaml
 # Is display sleeping?
 binary_sensor:
-  - name: ${device_name} Display sleeping
+  - name: Display sleeping
     id: display_sleeping
     platform: template
     lambda: |-
@@ -306,7 +367,7 @@ There are several ways to wake-up or put your panel to sleep, but in this exampl
 ```yaml
 button:
   # Adds a button to put the panel to sleep
-  - name: ${device_name} Sleep
+  - name: Sleep
     id: force_sleep
     platform: template
     icon: mdi:sleep
@@ -317,7 +378,7 @@ button:
             if (id(current_page).state != "screensaver") id(disp1).goto_page("screensaver");
   
   # Adds a button to wake-up the panel (similar to the existing service)
-  - name: ${device_name} Wake-up
+  - name: Wake-up
     id: force_wake_up
     platform: template
     icon: mdi:alarm
@@ -338,7 +399,7 @@ and even use this in your automation to control when your panel is on with the s
 ```yaml
 light:
   # Add the display as a light in Home Assistant
-  - name: ${device_name} Display
+  - name: Display
     id: display_light
     icon: mdi:tablet-dashboard
     platform: monochromatic
@@ -474,7 +535,7 @@ time:
               target_temperature: 18°C
 ```
 
-### Framework `esp-idf`
+### Frameworks
 > [!IMPORTANT]
 > When switching from `arduino` to `esp-idf`, make sure to update the device with a serial cable as the partition table is different between the two frameworks
 as [OTA Update Component](https://esphome.io/components/ota) updates will not change the partition table.
@@ -489,6 +550,14 @@ In any case, you can overlap the settings with this customization.
 > [!NOTE]
 > For more info about frameworks, please visit [ESPHome docs](https://esphome.io/components/esp32).
 
+#### Framework `arduino`
+```yaml
+# Change framework to `arduino`
+esp32:
+  framework:
+    type: arduino
+```
+#### Framework `esp-idf`
 ```yaml
 # Change framework to `esp-idf`
 esp32:
@@ -497,10 +566,20 @@ esp32:
 ```
 
 ### Bluetooth proxy
+<!-- markdownlint-disable MD028 -->
 > [!IMPORTANT]
 > The [ESP32 Platform](#framework-esp-idf) component should be configured to use the `esp-idf` framework,
 > as the `arduino` framework uses significantly more memory and performs poorly with the Bluetooth proxy enabled.
 
+> [!NOTE]
+> The Bluetooth proxy component significantly reduces device RAM, leaving less than 10k RAM free.
+> Enabling this with additional customizations/components may lead to crashes due to low memory.
+> HTTPS connections might be erratic, and local TFT flashing could fail due to insufficient RAM.
+>
+> Solutions include:
+> 1. Flash the device (remove Bluetooth proxy) while updating TFT.
+> 2. Flash from a local (HTTP) source at a low baud rate (9600 or lower) to avoid memory crashes. This method is slower, taking over 10 minutes.
+<!-- markdownlint-enable MD028 -->
 ```yaml
 # Enable Bluetooth proxy
 bluetooth_proxy:
@@ -591,4 +670,23 @@ switch:
     internal: false
   - id: !extend relay2_local
     internal: false
+```
+
+### Relay Interlocking
+This is using ESPHome capability to prevents the two relays to be active at the same time, which could be useful in some cases,
+like to control a cover like discussed in [#965](https://github.com/Blackymas/NSPanel_HA_Blueprint/issues/965).
+
+> [!ATTENTION]
+> There are some considerations about using software interlocking on the [ESPHome GPIO Switch documentation](https://esphome.io/components/switch/gpio.html#interlocking).
+Please read that carefully to understand what this is doing.
+
+```yaml
+switch:
+  # Prevents the two relays to be on simultaneously
+  - id: !extend relay_1
+    interlock: [relay_1, relay_2]
+    interlock_wait_time: 500ms  # Please adjust this accordingly
+  - id: !extend relay_2
+    interlock: [relay_1, relay_2]
+    interlock_wait_time: 500ms  # Please adjust this accordingly
 ```
