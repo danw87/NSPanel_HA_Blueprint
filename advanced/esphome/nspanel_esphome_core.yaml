@@ -95,6 +95,7 @@ wifi:
 ##### OTA PASSWORD #####
 ota:
   id: ota_std
+  platform: esphome
   password: ${ota_password}
   safe_mode: true
   reboot_timeout: 3min
